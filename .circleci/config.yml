@@ -1,27 +1,40 @@
-version: 2.1
+version: 2
 jobs:
-  build-and-test:
-  swiftlint:
+  one:
     docker:
-      - image: dantoml/swiftlint:latest
+      - image: circleci/ruby:2.4.1
     steps:
       - checkout
-      - run: swiftlint lint --reporter junit | tee result.xml
-      - store_artifacts:
-          path: result.xml
-      - store_test_results:
-          path: result.xml
-  danger:
+      - run: echo "A first hello"
+      - run: mkdir -p my_workspace
+      - run: echo "Trying out workspaces" > my_workspace/echo-output
+      - persist_to_workspace:
+          # Must be an absolute path, or relative path from working_directory
+          root: my_workspace
+          # Must be relative path from root
+          paths:
+            - echo-output
+  two:
     docker:
-      - image: dantoml/danger:latest
+      - image: circleci/ruby:2.4.1
     steps:
       - checkout
-      - run: danger
+      - run: echo "A more familiar hi"
+      - attach_workspace:
+          # Must be absolute path or relative path from working_directory
+          at: my_workspace
 
+      - run: |
+          if [[ $(cat my_workspace/echo-output) == "Trying out workspaces" ]]; then
+            echo "It worked!";
+          else
+            echo "Nope!"; exit 1
+          fi
 workflows:
-  build-test-lint:
+  version: 2
+  one_and_two:
     jobs:
-      - swiftlint
-      - danger
-      - build-and-test
-
+      - one
+      - two:
+          requires:
+            - one
